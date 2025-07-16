@@ -4,6 +4,8 @@ __pycache__/
 *.egg-info/
 .venv/
 .env
+
+# 사용자 정보 및 발송 이력 파일
 users.json
 sent_notifications.json
 
