@@ -69,7 +69,7 @@ for user in users:
     keywords = user['keywords']
 
     # 해당 사용자의 발송 이력 리스트
-    user_sent = sent_data.get(phone, [])
+    user_sent = sent_data.get(name, [])
 
     for keyword in keywords:
         # 요청 파라미터 구성
@@ -125,7 +125,7 @@ for user in users:
             print(response.text)
 
     # 갱신된 이력 저장
-    sent_data[phone] = user_sent
+    sent_data[name] = user_sent
 
 # 전체 발송 이력 저장
 with open(SENT_FILE, 'w', encoding="utf-8") as f:
