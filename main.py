@@ -3,10 +3,18 @@ import requests
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from solapi import SolapiMessageService
+from solapi.model import RequestMessage
 
 # 환경변수 불러오기
 load_dotenv()
 SERVICE_KEY = os.getenv('SERVICE_KEY')
+COOLSMS_API_KEY = os.getenv('COOLSMS_API_KEY')
+COOLSMS_API_SECRET = os.getenv('COOLSMS_API_SECRET')
+COOLSMS_SENDER = os.getenv('COOLSMS_SENDER')
+
+# CoolSMS API 키와 API Secret 설정
+message_service = SolapiMessageService(api_key=COOLSMS_API_KEY, api_secret=COOLSMS_API_SECRET)
 
 # 기준 배치 시각 설정 (9,12,15,18시)
 BATCH_TIMES = [9, 12, 15, 18]
@@ -57,7 +65,6 @@ with open("users.json", "r", encoding="utf-8") as f:
 
 # 배치 시간 구간 계산
 now = datetime.now()
-#now = datetime.now().replace(hour=8, minute=59, second=0, microsecond=0)
 print("now: ", now)
 inqryBgnDt, inqryEndDt = get_batch_time_ranges(now)
 print(f"[배치 요청 시간 범위] {inqryBgnDt} ~ {inqryEndDt}")
@@ -114,6 +121,30 @@ for user in users:
                     print(f"   공고번호: {item.get('bidNtceNo')}")
                     print(f"   공고일시: {item.get('bidNtceDt')}")
                     print(f"   상세URL: {item.get('bidNtceDtlUrl')}")
+
+                    # 문자 메시지 내용 구성
+                    msg_text = (
+                        f"[입찰 공고 알림]\n"
+                        f"공고명: {item.get('bidNtceNm')}\n"
+                        f"공고번호: {item.get('bidNtceNo')}\n"
+                        f"공고일시: {item.get('bidNtceDt')}\n"
+                        f"상세URL: {item.get('bidNtceDtlUrl')}"
+                    )
+
+                    # 단일 메시지 생성
+                    message = RequestMessage(
+                            from_=COOLSMS_SENDER,
+                            to=phone,
+                            text=msg_text,
+                    )
+
+                    # 메시지 발송
+                    try:
+                        res = message_service.send(message)
+                        print(f"문자 발송 완료 (Group ID: {res.group_info.group_id})")
+                    except Exception as e:
+                        print(f"문자 발송 실패: {str(e)}")
+
                     user_sent.append(bid_no)
                     new_notices += 1
 
