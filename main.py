@@ -49,6 +49,16 @@ def get_batch_time_ranges(now):
 
     return bgn.strftime("%Y%m%d%H%M"), end.strftime("%Y%m%d%H%M")
 
+# 문자 메시지 내용 생성 함수
+def make_sms_text(bid_name: str) -> str:
+    prefix = "[입찰 공고 알림]\n공고명: "
+    max_length = 30
+
+    if len(bid_name) > max_length:
+        bid_name = bid_name[:max_length - 3] + "..."
+
+    return prefix + bid_name
+
 # 발송 이력 파일 경로
 SENT_FILE = "sent_notifications.json"
 
@@ -123,13 +133,7 @@ for user in users:
                     print(f"   상세URL: {item.get('bidNtceDtlUrl')}")
 
                     # 문자 메시지 내용 구성
-                    msg_text = (
-                        f"[입찰 공고 알림]\n"
-                        f"공고명: {item.get('bidNtceNm')}\n"
-                        f"공고번호: {item.get('bidNtceNo')}\n"
-                        f"공고일시: {item.get('bidNtceDt')}\n"
-                        f"상세URL: {item.get('bidNtceDtlUrl')}"
-                    )
+                    msg_text = make_sms_text(item.get('bidNtceNm'))
 
                     # 단일 메시지 생성
                     message = RequestMessage(
