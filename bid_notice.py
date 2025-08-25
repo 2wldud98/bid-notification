@@ -73,14 +73,27 @@ def main():
                         if bid_no in user_sent:
                             continue  # 중복 알림 방지
 
-                        # 공고 정보 출력
-                        print(f"{i}. 공고명: {item.get('bidNtceNm')}")
-                        print(f"   공고번호: {bid_no}")
-                        print(f"   공고일시: {item.get('bidNtceDt')}")
-                        print(f"   상세URL: {item.get('bidNtceDtlUrl')}")
-
                         # 문자 메시지 내용 구성
-                        msg_text = make_sms_text("[입찰 공고 알림]\n공고명: ", item.get('bidNtceNm', ''))
+                        msg_text = (
+                            f"[입찰 공고 알림]\n"
+                            f"공고명: {item.get('bidNtceNm')}\n"
+                            f"공고번호: {item.get('bidNtceNo')}\n"
+                            f"수요기관: {item.get('dminsttNm')}\n"
+                            f"공고일: {item.get('bidNtceDt')}\n"
+                            f"입찰마감일: {item.get('bidClseDt')}\n"
+                            f"상세URL: {item.get('bidNtceDtlUrl')}"
+                        )
+
+                        # 공고 정보 출력
+                        print(
+                            f"입찰 공고 | "
+                            f"공고명='{item.get('bidNtceNm')}', "
+                            f"공고번호={item.get('bidNtceNo')}, "
+                            f"수요기관='{item.get('dminsttNm')}', "
+                            f"공고일={item.get('bidNtceDt')}, "
+                            f"입찰마감일={item.get('bidClseDt')}, "
+                            f"상세URL={item.get('bidNtceDtlUrl')}"
+                        )
 
                         # 단일 메시지 생성 및 발송
                         message = RequestMessage(

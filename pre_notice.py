@@ -73,13 +73,23 @@ def main():
                         if bid_no in user_sent:
                             continue  # 중복 알림 방지
 
-                        # 공고 정보 출력
-                        print(f"{i}. 사업명: {item.get('prdctClsfcNoNm')}")
-                        print(f"   사전규격등록번호: {bid_no}")
-                        print(f"   접수일시: {item.get('rcptDt')}")
-
                         # 문자 메시지 내용 구성
-                        msg_text = make_sms_text("[사전 공고 알림]\n사업명: ", item.get('prdctClsfcNoNm', ''))
+                        msg_text = (
+                            f"[사전 공고 알림]\n"
+                            f"사업명: {item.get('prdctClsfcNoNm')}\n"
+                            f"등록번호: {item.get('bfSpecRgstNo')}\n"
+                            f"수요기관: {item.get('rlDminsttNm')}\n"
+                            f"접수일시: {item.get('rcptDt')}\n"
+                        )
+
+                        # 공고 정보 출력
+                        print(
+                            f"사전 공고 | "
+                            f"사업명='{item.get('prdctClsfcNoNm')}', "
+                            f"등록번호={item.get('bfSpecRgstNo')}, "
+                            f"수요기관='{item.get('rlDminsttNm')}', "
+                            f"접수일시={item.get('rcptDt')}"
+                        )
 
                         # 단일 메시지 생성 및 발송
                         message = RequestMessage(

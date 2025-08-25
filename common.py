@@ -45,8 +45,8 @@ def get_batch_time_ranges(now):
     end = now.replace(hour=prev_batch_hour, minute=0, second=0, microsecond=0)
     return bgn.strftime("%Y%m%d%H%M"), end.strftime("%Y%m%d%H%M")
 
-def make_sms_text(prefix: str, content_name: str) -> str:
-    """SMS 메시지 내용 생성"""
+def make_sms_text_compact(prefix: str, content_name: str) -> str:
+    """간결한 SMS 메시지 내용 생성"""
     max_length = 30
     if len(content_name) > max_length:
         content_name = content_name[:max_length - 3] + "..."
