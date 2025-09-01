@@ -10,14 +10,15 @@
         "demand_org": "수요기관A"
       },
       {
-        "type": "bid",
-        "keyword": "입찰공고명2"
-      },
-      {
         "type": "pre",
         "keyword": "사전공고명1",
         "notice_org": "공고기관B",
         "demand_org": "수요기관B"
+      },
+      {
+        "type": "award",
+        "keyword": "낙찰공고명1",
+        "notice_number": "공고번호-2024-001"
       }
     ]
   }

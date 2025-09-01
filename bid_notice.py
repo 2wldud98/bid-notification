@@ -44,7 +44,7 @@ def main():
             continue
 
         if name not in sent_data:
-            sent_data[name] = {"bid_notices": [], "pre_notices": []}
+            sent_data[name] = {"bid_notices": [], "pre_notices": [], "award_notices": []}
 
         user_sent = sent_data[name].get('bid_notices', [])
 
@@ -108,12 +108,12 @@ def main():
                         # 문자 메시지 내용 구성
                         msg_text = (
                             f"[입찰 공고 알림]\n"
-                            f"공고명: {item.get('bidNtceNm')}\n"
-                            f"공고번호: {item.get('bidNtceNo')}\n"
-                            f"수요기관: {item.get('dminsttNm')}\n"
-                            f"공고일: {item.get('bidNtceDt')}\n"
-                            f"입찰마감일: {item.get('bidClseDt')}\n"
-                            f"상세URL: {item.get('bidNtceDtlUrl')}"
+                            f"■ 공고명: {item.get('bidNtceNm')}\n"
+                            f"■ 공고번호: {item.get('bidNtceNo')}\n"
+                            f"■ 수요기관: {item.get('dminsttNm')}\n"
+                            f"■ 공고일: {item.get('bidNtceDt')}\n"
+                            f"■ 입찰마감일: {item.get('bidClseDt')}\n"
+                            f"■ 상세URL: {item.get('bidNtceDtlUrl')}"
                         )
 
                         # 공고 정보 출력

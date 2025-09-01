@@ -4,10 +4,10 @@ from solapi import SolapiMessageService
 from solapi.model import RequestMessage
 from common import *
 
-API_URL = "https://apis.data.go.kr/1230000/ao/HrcspSsstndrdInfoService/getPublicPrcureThngInfoServcPPSSrch"
+API_URL = "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServcPPSSrch"
 
 def main():
-    """사전공고 알림 서비스 실행"""
+    """낙찰공고 알림 서비스 실행"""
 
     # 환경변수 로딩
     env_vars = load_environment()
@@ -37,24 +37,23 @@ def main():
         phone = user['phone']
         search_conditions = user.get('search_conditions', [])
 
-        pre_conditions = [c for c in search_conditions if c.get('type') == 'pre']
+        award_conditions = [c for c in search_conditions if c.get('type') == 'award']
 
-        if not pre_conditions:
-            print(f"[{name}] 사전공고 검색 조건이 없습니다.")
+        if not award_conditions:
+            print(f"[{name}] 낙찰공고 검색 조건이 없습니다.")
             continue
 
         if name not in sent_data:
             sent_data[name] = {"bid_notices": [], "pre_notices": [], "award_notices": []}
 
-        user_sent = sent_data[name].get('pre_notices', [])
+        user_sent = sent_data[name].get('award_notices', [])
 
         # 각 조건에 대해 API 요청 실행
-        for condition in pre_conditions:
+        for condition in award_conditions:
             keyword = condition.get('keyword')
-            notice_org = condition.get('notice_org')
-            demand_org = condition.get('demand_org')
+            number = condition.get('notice_number')
 
-            if not (keyword or notice_org or demand_org):
+            if not (keyword or number):
                 print(f"[{name}] 검색 조건이 없어 건너뜀")
                 continue
 
@@ -66,6 +65,7 @@ def main():
                 "inqryDiv": 1,
                 "inqryBgnDt": inqry_bgn_dt,
                 "inqryEndDt": inqry_end_dt,
+                "indstrytyCd": "1468",
                 "type": "json"
             }
 
@@ -74,14 +74,11 @@ def main():
 
             # 검색 조건이 있으면 파라미터에 추가
             if keyword:
-                params["prdctClsfcNoNm"] = keyword
-                search_parts.append(f"키워드='{keyword}'")
-            if notice_org:
-                params["ntceInsttNm"] = notice_org
-                search_parts.append(f"공고기관='{notice_org}'")
-            if demand_org:
-                params["dminsttNm"] = demand_org
-                search_parts.append(f"수요기관='{demand_org}'")
+                params["bidNtceNm"] = keyword
+                search_parts.append(f"입찰공고명='{keyword}'")
+            if number:
+                params["bidNtceNo"] = number
+                search_parts.append(f"입찰공고번호='{number}'")
 
             search_desc = " + ".join(search_parts)
 
@@ -93,33 +90,33 @@ def main():
                 data = response.json()
                 items = data.get("response", {}).get("body", {}).get("items", [])
 
-                print(f"[{name}] 사전공고 조회 {search_desc} 결과:")
+                print(f"[{name}] 낙찰공고 조회 {search_desc} 결과:")
                 if not items:
                     print("조회된 데이터가 없습니다.")
                     print("-" * 40)
                 else:
                     new_notices = 0
                     for i, item in enumerate(items, start=1):
-                        bid_no = item.get("bfSpecRgstNo")
+                        bid_no = item.get("bidNtceNo")
                         if bid_no in user_sent:
                             continue  # 중복 알림 방지
 
                         # 문자 메시지 내용 구성
                         msg_text = (
-                            f"[사전 공고 알림]\n"
-                            f"■ 사업명: {item.get('prdctClsfcNoNm')}\n"
-                            f"■ 등록번호: {item.get('bfSpecRgstNo')}\n"
-                            f"■ 수요기관: {item.get('rlDminsttNm')}\n"
-                            f"■ 접수일시: {item.get('rcptDt')}\n"
+                            f"[입찰 결과 알림]\n"
+                            f"■ 공고명: {item.get('bidNtceNm')}\n"
+                            f"■ 공고번호: {item.get('bidNtceNo')}\n"
+                            f"■ 최종낙찰업체: {item.get('bidwinnrNm')}\n"
+                            f"■ 낙찰일자: {item.get('fnlSucsfDate')}\n"
                         )
 
                         # 공고 정보 출력
                         print(
-                            f"사전 공고 | "
-                            f"사업명='{item.get('prdctClsfcNoNm')}', "
-                            f"등록번호={item.get('bfSpecRgstNo')}, "
-                            f"수요기관='{item.get('rlDminsttNm')}', "
-                            f"접수일시={item.get('rcptDt')}"
+                            f"낙찰 공고 | "
+                            f"공고명='{item.get('bidNtceNm')}', "
+                            f"공고번호={item.get('bidNtceNo')}, "
+                            f"최종낙찰업체='{item.get('bidwinnrNm')}', "
+                            f"낙찰일자={item.get('fnlSucsfDate')}"
                         )
 
                         # 단일 메시지 생성 및 발송
@@ -130,8 +127,8 @@ def main():
                         )
 
                         try:
-                            res = message_service.send(message)
-                            print(f"문자 발송 완료 (Group ID: {res.group_info.group_id})")
+                            # res = message_service.send(message)
+                            # print(f"문자 발송 완료 (Group ID: {res.group_info.group_id})")
                             user_sent.append(bid_no)
                             new_notices += 1
                         except Exception as e:
@@ -147,11 +144,11 @@ def main():
                 print(response.text)
 
         # 사용자별 발송 이력 업데이트
-        sent_data[name]['pre_notices'] = user_sent
+        sent_data[name]['award_notices'] = user_sent
 
     # 전체 발송 이력 저장
     save_sent_data(sent_data)
-    print(f"* 총 {total_notifications} 건의 새로운 사전공고 알림 발송\n")
+    print(f"* 총 {total_notifications} 건의 새로운 낙찰공고 알림 발송\n")
 
 if __name__ == "__main__":
     main()
