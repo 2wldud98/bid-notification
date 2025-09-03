@@ -110,7 +110,9 @@ def main():
                             f"■ 사업명: {item.get('prdctClsfcNoNm')}\n"
                             f"■ 등록번호: {item.get('bfSpecRgstNo')}\n"
                             f"■ 수요기관: {item.get('rlDminsttNm')}\n"
+                            f"■ 배정예산금액: {int(item.get('asignBdgtAmt', 0)):,}원\n"
                             f"■ 접수일시: {item.get('rcptDt')}\n"
+                            f"■ 의견등록마감일시: {item.get('opninRgstClseDt')}\n"
                         )
 
                         # 공고 정보 출력
@@ -119,7 +121,9 @@ def main():
                             f"사업명='{item.get('prdctClsfcNoNm')}', "
                             f"등록번호={item.get('bfSpecRgstNo')}, "
                             f"수요기관='{item.get('rlDminsttNm')}', "
+                            f"배정예산금액='{item.get('asignBdgtAmt')}', "
                             f"접수일시={item.get('rcptDt')}"
+                            f"의견등록마감일시={item.get('opninRgstClseDt')}"
                         )
 
                         # 단일 메시지 생성 및 발송

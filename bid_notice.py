@@ -111,8 +111,9 @@ def main():
                             f"■ 공고명: {item.get('bidNtceNm')}\n"
                             f"■ 공고번호: {item.get('bidNtceNo')}\n"
                             f"■ 수요기관: {item.get('dminsttNm')}\n"
-                            f"■ 공고일: {item.get('bidNtceDt')}\n"
-                            f"■ 입찰마감일: {item.get('bidClseDt')}\n"
+                            f"■ 공고일시: {item.get('bidNtceDt')}\n"
+                            f"■ 입찰마감일시: {item.get('bidClseDt')}\n"
+                            f"■ 추정가격: {int(item.get('presmptPrce', 0)):,}원\n"
                             f"■ 상세URL: {item.get('bidNtceDtlUrl')}"
                         )
 
@@ -122,8 +123,9 @@ def main():
                             f"공고명='{item.get('bidNtceNm')}', "
                             f"공고번호={item.get('bidNtceNo')}, "
                             f"수요기관='{item.get('dminsttNm')}', "
-                            f"공고일={item.get('bidNtceDt')}, "
-                            f"입찰마감일={item.get('bidClseDt')}, "
+                            f"공고일시={item.get('bidNtceDt')}, "
+                            f"입찰마감일시={item.get('bidClseDt')}, "
+                            f"추정가격={item.get('presmptPrce')}, "
                             f"상세URL={item.get('bidNtceDtlUrl')}"
                         )
 
