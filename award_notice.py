@@ -1,7 +1,6 @@
 import requests
 from datetime import datetime
 from solapi import SolapiMessageService
-from solapi.model import RequestMessage
 from common import *
 
 API_URL = "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServcPPSSrch"
@@ -87,58 +86,65 @@ def main():
             print(f"요청 URL: {response.request.url}")
 
             if response.status_code == 200:
-                data = response.json()
-                items = data.get("response", {}).get("body", {}).get("items", [])
+                try:
+                    data = response.json()
 
-                print(f"[{name}] 낙찰공고 조회 {search_desc} 결과:")
-                if not items:
-                    print("조회된 데이터가 없습니다.")
+                    # API 에러 응답 체크
+                    if "nkoneps.com.response.ResponseError" in data:
+                        error_info = data["nkoneps.com.response.ResponseError"]["header"]
+                        error_code = error_info.get("resultCode")
+                        error_msg = error_info.get("resultMsg")
+                        print(f"[{name}] API 오류 발생 - 코드: {error_code}, 메시지: {error_msg}")
+                        print("-" * 40)
+                        continue
+
+                    # 정상 응답 처리
+                    items = data.get("response", {}).get("body", {}).get("items", [])
+
+                    print(f"[{name}] 낙찰공고 조회 {search_desc} 결과:")
+                    if not items:
+                        print("조회된 데이터가 없습니다.")
+                        print("-" * 40)
+                    else:
+                        new_notices = 0
+                        for i, item in enumerate(items, start=1):
+                            bid_no = item.get("bidNtceNo")
+                            if bid_no in user_sent:
+                                continue  # 중복 알림 방지
+
+                            # 문자 메시지 내용 구성
+                            msg_text = (
+                                f"[입찰 결과 알림]\n"
+                                f"■ 공고명: {item.get('bidNtceNm')}\n"
+                                f"■ 공고번호: {item.get('bidNtceNo')}\n"
+                                f"■ 최종낙찰업체: {item.get('bidwinnrNm')}\n"
+                                f"■ 낙찰일자: {item.get('fnlSucsfDate')}\n"
+                            )
+
+                            # 공고 정보 출력
+                            print(
+                                f"낙찰 공고 | "
+                                f"공고명='{item.get('bidNtceNm')}', "
+                                f"공고번호={item.get('bidNtceNo')}, "
+                                f"최종낙찰업체='{item.get('bidwinnrNm')}', "
+                                f"낙찰일자={item.get('fnlSucsfDate')}"
+                            )
+
+                            # 단일 메시지 생성 및 발송
+                            if send_message(message_service, env_vars['coolsms_sender'], phone, msg_text):
+                                user_sent.append(bid_no)
+                                new_notices += 1
+
+                        if new_notices == 0:
+                            print("모든 결과는 이미 알림 발송됨.")
+
+                        total_notifications += new_notices
+                        print("-" * 40)
+
+                except (ValueError, KeyError) as e:
+                    print(f"[{name}] JSON 파싱 오류")
                     print("-" * 40)
-                else:
-                    new_notices = 0
-                    for i, item in enumerate(items, start=1):
-                        bid_no = item.get("bidNtceNo")
-                        if bid_no in user_sent:
-                            continue  # 중복 알림 방지
-
-                        # 문자 메시지 내용 구성
-                        msg_text = (
-                            f"[입찰 결과 알림]\n"
-                            f"■ 공고명: {item.get('bidNtceNm')}\n"
-                            f"■ 공고번호: {item.get('bidNtceNo')}\n"
-                            f"■ 최종낙찰업체: {item.get('bidwinnrNm')}\n"
-                            f"■ 낙찰일자: {item.get('fnlSucsfDate')}\n"
-                        )
-
-                        # 공고 정보 출력
-                        print(
-                            f"낙찰 공고 | "
-                            f"공고명='{item.get('bidNtceNm')}', "
-                            f"공고번호={item.get('bidNtceNo')}, "
-                            f"최종낙찰업체='{item.get('bidwinnrNm')}', "
-                            f"낙찰일자={item.get('fnlSucsfDate')}"
-                        )
-
-                        # 단일 메시지 생성 및 발송
-                        message = RequestMessage(
-                            from_=env_vars['coolsms_sender'],
-                            to=phone,
-                            text=msg_text,
-                        )
-
-                        try:
-                            # res = message_service.send(message)
-                            # print(f"문자 발송 완료 (Group ID: {res.group_info.group_id})")
-                            user_sent.append(bid_no)
-                            new_notices += 1
-                        except Exception as e:
-                            print(f"문자 발송 실패: {str(e)}")
-
-                    if new_notices == 0:
-                        print("모든 결과는 이미 알림 발송됨.")
-
-                    total_notifications += new_notices
-                    print("-" * 40)
+                    continue
             else:
                 print(f"API 오류 발생: {response.status_code}")
                 print(response.text)

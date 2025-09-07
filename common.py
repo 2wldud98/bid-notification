@@ -2,6 +2,7 @@ import json
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from solapi.model import RequestMessage
 
 # 상수 정의
 BATCH_TIMES = [9, 12, 15, 18]
@@ -51,6 +52,21 @@ def make_sms_text_compact(prefix: str, content_name: str) -> str:
     if len(content_name) > max_length:
         content_name = content_name[:max_length - 3] + "..."
     return prefix + content_name
+
+def send_message(message_service, sender_phone, recipient_phone, message_text):
+    """단일 메시지 전송 함수"""
+    try:
+        message = RequestMessage(
+            from_=sender_phone,
+            to=recipient_phone,
+            text=message_text,
+        )
+        res = message_service.send(message)
+        print(f"문자 발송 완료 (Group ID: {res.group_info.group_id})")
+        return True
+    except Exception as e:
+        print(f"문자 발송 실패: {str(e)}")
+        return False
 
 def load_sent_data():
     """발송 이력 로딩"""
