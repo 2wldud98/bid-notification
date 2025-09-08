@@ -1,9 +1,32 @@
-import requests
 from datetime import datetime
 from solapi import SolapiMessageService
 from common import *
 
 API_URL = "https://apis.data.go.kr/1230000/ao/HrcspSsstndrdInfoService/getPublicPrcureThngInfoServcPPSSrch"
+
+def format_pre_message(item):
+    """사전공고 메시지 포맷"""
+    return (
+        f"[사전 공고 알림]\n"
+        f"■ 사업명: {item.get('prdctClsfcNoNm')}\n"
+        f"■ 등록번호: {item.get('bfSpecRgstNo')}\n"
+        f"■ 수요기관: {item.get('rlDminsttNm')}\n"
+        f"■ 배정예산금액: {int(item.get('asignBdgtAmt', 0)):,}원\n"
+        f"■ 접수일시: {item.get('rcptDt')}\n"
+        f"■ 의견등록마감일시: {item.get('opninRgstClseDt')}\n"
+    )
+
+def format_pre_log(item):
+    """사전공고 로그 포맷"""
+    return (
+        f"사전 공고 | "
+        f"사업명='{item.get('prdctClsfcNoNm')}', "
+        f"등록번호={item.get('bfSpecRgstNo')}, "
+        f"수요기관='{item.get('rlDminsttNm')}', "
+        f"배정예산금액='{item.get('asignBdgtAmt')}', "
+        f"접수일시={item.get('rcptDt')}"
+        f"의견등록마감일시={item.get('opninRgstClseDt')}"
+    )
 
 def main():
     """사전공고 알림 서비스 실행"""
@@ -68,93 +91,55 @@ def main():
                 "type": "json"
             }
 
-            # 검색 조건 설명 생성
-            search_parts = []
-
             # 검색 조건이 있으면 파라미터에 추가
             if keyword:
                 params["prdctClsfcNoNm"] = keyword
-                search_parts.append(f"키워드='{keyword}'")
             if notice_org:
                 params["ntceInsttNm"] = notice_org
-                search_parts.append(f"공고기관='{notice_org}'")
             if demand_org:
                 params["dminsttNm"] = demand_org
-                search_parts.append(f"수요기관='{demand_org}'")
 
-            search_desc = " + ".join(search_parts)
+            # 검색 조건 설명 생성
+            search_desc = build_search_description(keyword, notice_org, demand_org)
 
-            # API 요청
-            response = requests.get(API_URL, params=params)
-            print(f"요청 URL: {response.request.url}")
+            # API 요청 및 응답 처리
+            items = make_api_request(API_URL, params, name, search_desc)
 
-            if response.status_code == 200:
-                try:
-                    data = response.json()
+            if items is None:
+                print("-" * 40)
+                continue
 
-                    # API 에러 응답 체크
-                    if "nkoneps.com.response.ResponseError" in data:
-                        error_info = data["nkoneps.com.response.ResponseError"]["header"]
-                        error_code = error_info.get("resultCode")
-                        error_msg = error_info.get("resultMsg")
-                        print(f"[{name}] API 오류 발생 - 코드: {error_code}, 메시지: {error_msg}")
-                        print("-" * 40)
-                        continue
+            if not items:
+                print("-" * 40)
+                continue
 
-                    # 정상 응답 처리
-                    items = data.get("response", {}).get("body", {}).get("items", [])
+            # 결과가 5개 초과인 경우 제한 메시지 전송
+            if check_result_limit_and_notify(items, message_service, env_vars['coolsms_sender'], phone, search_desc):
+                print("-" * 40)
+                continue
 
-                    print(f"[{name}] 사전공고 조회 {search_desc} 결과:")
-                    if not items:
-                        print("조회된 데이터가 없습니다.")
-                        print("-" * 40)
-                    else:
-                        new_notices = 0
-                        for i, item in enumerate(items, start=1):
-                            bid_no = item.get("bfSpecRgstNo")
-                            if bid_no in user_sent:
-                                continue  # 중복 알림 방지
+            new_notices = 0
+            for i, item in enumerate(items, start=1):
+                bid_no = item.get("bfSpecRgstNo")
+                if bid_no in user_sent:
+                    continue  # 중복 알림 방지
 
-                            # 문자 메시지 내용 구성
-                            msg_text = (
-                                f"[사전 공고 알림]\n"
-                                f"■ 사업명: {item.get('prdctClsfcNoNm')}\n"
-                                f"■ 등록번호: {item.get('bfSpecRgstNo')}\n"
-                                f"■ 수요기관: {item.get('rlDminsttNm')}\n"
-                                f"■ 배정예산금액: {int(item.get('asignBdgtAmt', 0)):,}원\n"
-                                f"■ 접수일시: {item.get('rcptDt')}\n"
-                                f"■ 의견등록마감일시: {item.get('opninRgstClseDt')}\n"
-                            )
+                # 문자 메시지 내용 구성
+                msg_text = format_pre_message(item)
 
-                            # 공고 정보 출력
-                            print(
-                                f"사전 공고 | "
-                                f"사업명='{item.get('prdctClsfcNoNm')}', "
-                                f"등록번호={item.get('bfSpecRgstNo')}, "
-                                f"수요기관='{item.get('rlDminsttNm')}', "
-                                f"배정예산금액='{item.get('asignBdgtAmt')}', "
-                                f"접수일시={item.get('rcptDt')}"
-                                f"의견등록마감일시={item.get('opninRgstClseDt')}"
-                            )
+                # 공고 정보 출력
+                print(format_pre_log(item))
 
-                            # 단일 메시지 생성 및 발송
-                            if send_message(message_service, env_vars['coolsms_sender'], phone, msg_text):
-                                user_sent.append(bid_no)
-                                new_notices += 1
+                # 단일 메시지 생성 및 발송
+                if send_message(message_service, env_vars['coolsms_sender'], phone, msg_text):
+                    user_sent.append(bid_no)
+                    new_notices += 1
 
-                        if new_notices == 0:
-                            print("모든 결과는 이미 알림 발송됨.")
+            if new_notices == 0:
+                print("모든 결과는 이미 알림 발송됨.")
 
-                        total_notifications += new_notices
-                        print("-" * 40)
-
-                except (ValueError, KeyError) as e:
-                    print(f"[{name}] JSON 파싱 오류")
-                    print("-" * 40)
-                    continue
-            else:
-                print(f"API 오류 발생: {response.status_code}")
-                print(response.text)
+            total_notifications += new_notices
+            print("-" * 40)
 
         # 사용자별 발송 이력 업데이트
         sent_data[name]['pre_notices'] = user_sent

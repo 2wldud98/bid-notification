@@ -1,5 +1,6 @@
 import json
 import os
+import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from solapi.model import RequestMessage
@@ -46,7 +47,7 @@ def get_batch_time_ranges(now):
     end = now.replace(hour=prev_batch_hour, minute=0, second=0, microsecond=0)
     return bgn.strftime("%Y%m%d%H%M"), end.strftime("%Y%m%d%H%M")
 
-def make_sms_text_compact(prefix: str, content_name: str) -> str:
+def make_sms_text_compact(prefix, content_name):
     """간결한 SMS 메시지 내용 생성"""
     max_length = 30
     if len(content_name) > max_length:
@@ -84,3 +85,66 @@ def load_users():
     """사용자 정보 로딩"""
     with open(USERS_FILE, 'r', encoding="utf-8") as f:
         return json.load(f)
+
+def build_search_description(keyword=None, notice_org=None, demand_org=None, number=None):
+    """검색 조건 설명 생성"""
+    search_parts = []
+    if keyword:
+        search_parts.append(f"키워드='{keyword}'")
+    if notice_org:
+        search_parts.append(f"공고기관='{notice_org}'")
+    if demand_org:
+        search_parts.append(f"수요기관='{demand_org}'")
+    if number:
+        search_parts.append(f"공고번호='{number}'")
+    return " + ".join(search_parts)
+
+def make_api_request(api_url, params, name, search_desc):
+    """API 요청 및 응답 처리"""
+    response = requests.get(api_url, params=params)
+    print(f"요청 URL: {response.request.url}")
+
+    if response.status_code != 200:
+        print(f"API 오류 발생: {response.status_code}")
+        print(response.text)
+        return None
+
+    try:
+        data = response.json()
+
+        # API 에러 응답 체크
+        if "nkoneps.com.response.ResponseError" in data:
+            error_info = data["nkoneps.com.response.ResponseError"]["header"]
+            error_code = error_info.get("resultCode")
+            error_msg = error_info.get("resultMsg")
+            print(f"[{name}] API 오류 발생 - 코드: {error_code}, 메시지: {error_msg}")
+            return None
+
+        # 정상 응답 처리
+        items = data.get("response", {}).get("body", {}).get("items", [])
+        print(f"[{name}] 조회 {search_desc} 결과:")
+
+        if not items:
+            print("조회된 데이터가 없습니다.")
+            return []
+
+        return items
+
+    except (ValueError, KeyError) as e:
+        print(f"[{name}] JSON 파싱 오류")
+        return None
+
+def check_result_limit_and_notify(items, message_service, sender_phone, recipient_phone, search_desc, limit=5):
+    """결과 개수 제한 체크 및 제한 메시지 발송"""
+    if len(items) > limit:
+        limit_msg = (
+            f"[공고 알림]\n"
+            f"{search_desc} 새 공고 {len(items)}건 조회\n"
+            f"결과가 많아 발송 제한됩니다.\n"
+            f"조회조건을 더 구체적으로 설정해주세요.\n"
+        )
+
+        if send_message(message_service, sender_phone, recipient_phone, limit_msg):
+            print(f"제한 메시지 전송 완료: {len(items)}개 결과")
+        return True
+    return False
