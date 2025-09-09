@@ -91,7 +91,7 @@ def main():
                 "type": "json"
             }
 
-            # 검색 조건이 있으면 파라미터에 추가
+            # 검색 조건 파라미터 추가
             if keyword:
                 params["prdctClsfcNoNm"] = keyword
             if notice_org:
@@ -105,11 +105,7 @@ def main():
             # API 요청 및 응답 처리
             items = make_api_request(API_URL, params, name, search_desc)
 
-            if items is None:
-                print("-" * 40)
-                continue
-
-            if not items:
+            if items is None or not items:
                 print("-" * 40)
                 continue
 
@@ -118,23 +114,24 @@ def main():
                 print("-" * 40)
                 continue
 
+            # 알림 처리
             new_notices = 0
             for i, item in enumerate(items, start=1):
                 bid_no = item.get("bfSpecRgstNo")
+
+                # 중복 알림 방지
                 if bid_no in user_sent:
-                    continue  # 중복 알림 방지
+                    continue
 
-                # 문자 메시지 내용 구성
+                # 메시지 내용 구성 및 발송
                 msg_text = format_pre_message(item)
-
-                # 공고 정보 출력
                 print(format_pre_log(item))
 
-                # 단일 메시지 생성 및 발송
                 if send_message(message_service, env_vars['coolsms_sender'], phone, msg_text):
                     user_sent.append(bid_no)
                     new_notices += 1
 
+            # 결과 출력
             if new_notices == 0:
                 print("모든 결과는 이미 알림 발송됨.")
 
